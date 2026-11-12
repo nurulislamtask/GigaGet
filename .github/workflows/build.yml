@@ -115,14 +115,19 @@ jobs:
         with:
           targets: aarch64-linux-android,armv7-linux-androideabi
 
-      - name: Install NDK
+      - name: Prepare Android SDK and NDK
         run: |
-          # The runner image already ships the Android SDK.
+          # The runner image already ships the Android SDK and an NDK, so reuse them and only download what is missing.
           export ANDROID_HOME=${ANDROID_HOME:-/usr/local/lib/android/sdk}
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME \
-            "ndk;26.1.10909125" "build-tools;34.0.0" "platforms;android-36" >/dev/null
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME"
+          get() { for i in 1 2 3; do yes | $SDKM "$@" >/dev/null && return 0; echo "retry $i for $*"; sleep 10; done; return 1; }
+          NDK=$(ls -d $ANDROID_HOME/ndk/* 2>/dev/null | sort -V | tail -n1)
+          if [ -z "$NDK" ]; then get "ndk;26.1.10909125"; NDK=$ANDROID_HOME/ndk/26.1.10909125; fi
+          [ -d "$ANDROID_HOME/build-tools/34.0.0" ] || get "build-tools;34.0.0"
+          [ -d "$ANDROID_HOME/platforms/android-36" ] || get "platforms;android-36"
+          echo "Using NDK $NDK"
           echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
-          echo "NDK_HOME=$ANDROID_HOME/ndk/26.1.10909125" >> $GITHUB_ENV
+          echo "NDK_HOME=$NDK" >> $GITHUB_ENV
 
       - run: pnpm install
       - run: pnpm tauri icon app-icon.png
