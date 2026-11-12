@@ -152,7 +152,6 @@ jobs:
           path: GigaGet.apk
 
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
     needs: [desktop, android]
     runs-on: ubuntu-latest
     steps:
@@ -162,4 +161,8 @@ jobs:
           merge-multiple: true
       - uses: softprops/action-gh-release@v2
         with:
+          tag_name: v0.1.${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          name: GigaGet v0.1.${{ github.run_number }}
+          make_latest: true
           files: dist/**
