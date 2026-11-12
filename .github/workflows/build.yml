@@ -132,13 +132,24 @@ jobs:
       - name: Allow native binaries to be extracted, keep reflection-based code intact
         run: |
           python3 - <<'EOF'
+          import re
           p = "src-tauri/gen/android/app/build.gradle.kts"
           s = open(p).read()
           if "useLegacyPackaging" not in s:
               s = s.replace("android {", "android {\n    packaging { jniLibs { useLegacyPackaging = true } }", 1)
           # R8 renames and strips classes the engine libraries load by reflection, which can crash the app.
-          s = s.replace("isMinifyEnabled = true", "isMinifyEnabled = false")
+          s = re.sub(r"(isMinifyEnabled|minifyEnabled)(\s*=\s*|\s+)true", r"\1\2false", s)
           open(p, "w").write(s)
+          # Belt and braces: if minify still runs anywhere, these rules keep the engine intact.
+          open("src-tauri/gen/android/app/proguard-gigaget.pro", "w").write("""-dontobfuscate
+          -dontoptimize
+          -keep class com.yausername.** { *; }
+          -keep class com.gigaget.engine.** { *; }
+          -keep class app.tauri.** { *; }
+          -keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
+          -dontwarn **
+          """.replace("\n          ", "\n"))
+          print([l.strip() for l in s.splitlines() if re.search(r"minify|proguard|useLegacy", l, re.I)])
           EOF
 
       - run: pnpm tauri android build --apk --target aarch64 --target armv7
