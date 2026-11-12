@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<title>GigaGet</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+
+  <aside class="rail" aria-label="Main">
+    <div class="brand"><span class="logo" aria-hidden="true"></span><b>GigaGet</b></div>
+    <button class="nav on" data-view="home">Downloads</button>
+    <button class="nav" data-view="about">Settings</button>
+  </aside>
+
+  <main>
+    <section id="view-home" class="view">
+      <h1 class="hero">Paste. Tap. <em>Got it.</em></h1>
+
+      <div id="clip" class="clip" hidden>
+        <div class="clip-txt"><small>Link found in clipboard</small><span id="clipUrl"></span></div>
+        <button id="clipGo" class="btn">Download</button>
+        <button id="clipX" class="ghost" aria-label="Dismiss">&times;</button>
+      </div>
+
+      <form id="grab" class="grab" autocomplete="off">
+        <input id="url" type="url" inputmode="url" placeholder="Paste a video, audio or file link" enterkeyhint="go" required>
+        <button class="btn" id="grabBtn" type="submit">Get</button>
+      </form>
+
+      <div id="preview" class="card preview" hidden>
+        <img id="pThumb" alt="">
+        <div class="pbody">
+          <div class="ptitle" id="pTitle"></div>
+          <div class="pmeta" id="pMeta"></div>
+          <div class="chips" id="chips" role="radiogroup" aria-label="Quality"></div>
+          <div class="prow">
+            <button id="pGo" class="btn big">Download</button>
+            <button id="pX" class="ghost">Cancel</button>
+          </div>
+        </div>
+      </div>
+      <p id="err" class="err" hidden></p>
+
+      <div class="tabs" role="tablist">
+        <button class="tab on" data-f="all">All</button>
+        <button class="tab" data-f="active">Active</button>
+        <button class="tab" data-f="done">Done</button>
+        <button id="clear" class="ghost small">Clear finished</button>
+      </div>
+      <ul id="list" class="list"></ul>
+      <div id="empty" class="empty">
+        <div class="empty-art" aria-hidden="true"></div>
+        <p>Nothing here yet.<br>Copy any link and come back, GigaGet will pick it up.</p>
+      </div>
+    </section>
+
+    <section id="view-about" class="view" hidden>
+      <h1 class="hero">Settings</h1>
+      <div class="card set">
+        <p class="lead">There is nothing you have to set up. GigaGet already includes everything it needs, keeps itself updated and remembers your last choices.</p>
+        <div class="row"><span>Saving to</span><code id="dir">Downloads/GigaGet</code></div>
+        <div class="row"><span>Engine</span><code id="engineVer">built in</code></div>
+        <div class="row"><span>Auto-detect copied links</span>
+          <label class="sw"><input type="checkbox" id="optClip" checked><i></i></label></div>
+        <div class="row"><span>Theme</span>
+          <select id="optTheme"><option value="auto">Auto</option><option value="dark">Dark</option><option value="light">Light</option></select></div>
+      </div>
+      <p class="fine">GigaGet is for saving content you have the right to save. Respect each site's terms and copyright.</p>
+    </section>
+  </main>
+
+  <nav class="tabbar" aria-label="Main">
+    <button class="nav on" data-view="home">Downloads</button>
+    <button class="nav" data-view="about">Settings</button>
+  </nav>
+</div>
+<script src="engine.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

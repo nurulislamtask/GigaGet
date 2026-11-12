@@ -1,0 +1,13 @@
+"$schema" = "schemas/schema.json"
+
+[default]
+description = "Allows the GigaGet UI to use the Android download engine."
+permissions = [
+  "allow-probe",
+  "allow-start",
+  "allow-cancel",
+  "allow-info",
+  "allow-open-file",
+  "allow-register-listener",
+  "allow-remove-listener",
+]

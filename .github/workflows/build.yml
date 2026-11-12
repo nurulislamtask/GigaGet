@@ -1,0 +1,164 @@
+name: Build GigaGet
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            triple: x86_64-unknown-linux-gnu
+          - os: windows-latest
+            triple: x86_64-pc-windows-msvc
+          - os: macos-latest
+            triple: x86_64-apple-darwin
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.triple }}
+
+      - name: Linux system libraries
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential libxdo-dev libssl-dev \
+            libayatana-appindicator3-dev librsvg2-dev patchelf xz-utils
+
+      # The installer ships yt-dlp and FFmpeg inside it, so users never install anything.
+      - name: Fetch bundled yt-dlp and FFmpeg
+        shell: bash
+        run: |
+          mkdir -p src-tauri/binaries
+          T=${{ matrix.triple }}
+          B=src-tauri/binaries
+          case "$RUNNER_OS" in
+            Linux)
+              curl -fL https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux -o $B/gigaget-ytdlp-$T
+              curl -fL https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz -o ff.tar.xz
+              tar -xJf ff.tar.xz --wildcards '*/bin/ffmpeg' --strip-components=2 -O > $B/gigaget-ffmpeg-$T
+              ;;
+            Windows)
+              curl -fL https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe -o $B/gigaget-ytdlp-$T.exe
+              curl -fL https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip -o ff.zip
+              unzip -j -o ff.zip '*/bin/ffmpeg.exe' -d ffx
+              mv ffx/ffmpeg.exe $B/gigaget-ffmpeg-$T.exe
+              ;;
+            macOS)
+              curl -fL https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos -o $B/gigaget-ytdlp-$T
+              curl -fL https://evermeet.cx/ffmpeg/getrelease/zip -o ff.zip
+              unzip -o ff.zip -d ffx
+              mv ffx/ffmpeg $B/gigaget-ffmpeg-$T
+              ;;
+          esac
+          chmod +x $B/gigaget-* || true
+          ls -la $B
+
+      - run: pnpm install
+      - run: pnpm tauri build --target ${{ matrix.triple }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gigaget-${{ matrix.triple }}
+          path: |
+            src-tauri/target/${{ matrix.triple }}/release/bundle/**/*.exe
+            src-tauri/target/${{ matrix.triple }}/release/bundle/**/*.msi
+            src-tauri/target/${{ matrix.triple }}/release/bundle/**/*.dmg
+            src-tauri/target/${{ matrix.triple }}/release/bundle/**/*.deb
+            src-tauri/target/${{ matrix.triple }}/release/bundle/**/*.AppImage
+            src-tauri/target/${{ matrix.triple }}/release/bundle/**/*.rpm
+
+  android:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: android-actions/setup-android@v3
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi
+
+      - name: Install NDK
+        run: |
+          yes | sdkmanager "ndk;26.1.10909125" "build-tools;34.0.0" "platforms;android-34" >/dev/null
+          echo "NDK_HOME=$ANDROID_HOME/ndk/26.1.10909125" >> $GITHUB_ENV
+
+      - run: pnpm install
+      - run: pnpm tauri icon app-icon.png
+      - run: pnpm tauri android init
+
+      # yt-dlp and FFmpeg are native binaries packed in the APK; Android must unpack them to run them.
+      - name: Allow native binaries to be extracted
+        run: |
+          python3 - <<'EOF'
+          p = "src-tauri/gen/android/app/build.gradle.kts"
+          s = open(p).read()
+          if "useLegacyPackaging" not in s:
+              s = s.replace("android {", "android {\n    packaging { jniLibs { useLegacyPackaging = true } }", 1)
+              open(p, "w").write(s)
+          EOF
+
+      - run: pnpm tauri android build --apk --target aarch64 --target armv7
+
+      - name: Sign the APK
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          BT=$ANDROID_HOME/build-tools/34.0.0
+          UNSIGNED=$(find src-tauri/gen/android -name "*-unsigned.apk" | head -n1)
+          if [ -n "$KS_B64" ]; then
+            echo "$KS_B64" | base64 -d > release.keystore; PASS="$KS_PASS"
+          else
+            # No key supplied: make a throwaway one. Installs fine, but each build is signed differently.
+            PASS=gigaget123
+            keytool -genkeypair -keystore release.keystore -alias gigaget -keyalg RSA -keysize 2048 \
+              -validity 10000 -storepass $PASS -keypass $PASS -dname "CN=GigaGet"
+          fi
+          $BT/zipalign -p -f 4 "$UNSIGNED" aligned.apk
+          $BT/apksigner sign --ks release.keystore --ks-pass pass:$PASS --out GigaGet.apk aligned.apk
+          $BT/apksigner verify GigaGet.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gigaget-android
+          path: GigaGet.apk
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [desktop, android]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/**

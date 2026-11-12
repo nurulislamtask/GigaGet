@@ -1,0 +1,27 @@
+[package]
+name = "giga-get"
+version = "0.1.0"
+description = "GigaGet: paste a link, get the file. Windows, macOS, Linux and Android."
+edition = "2021"
+license = "MIT"
+
+[lib]
+name = "giga_get_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["process", "io-util", "sync", "time", "rt", "macros"] }
+giga-engine = { path = "../plugins/giga-engine" }
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = true
