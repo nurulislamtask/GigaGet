@@ -8,8 +8,11 @@ use tauri::{
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
     Builder::new("giga-engine")
         .setup(|_app, _api| {
+            // If registration ever fails, keep the app open: the UI then shows an error instead of crashing.
             #[cfg(target_os = "android")]
-            _api.register_android_plugin("com.gigaget.engine", "GigaEnginePlugin")?;
+            if let Err(e) = _api.register_android_plugin("com.gigaget.engine", "GigaEnginePlugin") {
+                eprintln!("giga-engine: could not register the Android plugin: {e}");
+            }
             Ok(())
         })
         .build()

@@ -129,14 +129,16 @@ jobs:
       - run: pnpm tauri android init
 
       # yt-dlp and FFmpeg are native binaries packed in the APK; Android must unpack them to run them.
-      - name: Allow native binaries to be extracted
+      - name: Allow native binaries to be extracted, keep reflection-based code intact
         run: |
           python3 - <<'EOF'
           p = "src-tauri/gen/android/app/build.gradle.kts"
           s = open(p).read()
           if "useLegacyPackaging" not in s:
               s = s.replace("android {", "android {\n    packaging { jniLibs { useLegacyPackaging = true } }", 1)
-              open(p, "w").write(s)
+          # R8 renames and strips classes the engine libraries load by reflection, which can crash the app.
+          s = s.replace("isMinifyEnabled = true", "isMinifyEnabled = false")
+          open(p, "w").write(s)
           EOF
 
       - run: pnpm tauri android build --apk --target aarch64 --target armv7
