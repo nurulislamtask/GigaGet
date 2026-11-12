@@ -1,47 +1,86 @@
+<div align="center">
+
+<img src="app-icon.png" width="110" alt="GigaGet logo">
+
 # GigaGet
 
-Paste a link, get the file. One app for Windows, macOS, Linux and Android.
+**Paste a link. Tap. Got it.**<br>
+A fast, free video and audio downloader for **Android, Windows, macOS and Linux**.<br>
+Nothing to install, nothing to configure.
 
-**Zero setup.** The installer already contains the download engine (yt-dlp + FFmpeg). The engine updates itself in the background, files go to `Downloads/GigaGet`, and your last quality choice is remembered. Nothing has to be configured.
+[![Latest release](https://img.shields.io/github/v/release/nurulislamtask/GigaGet?style=for-the-badge&color=c8ff3c&labelColor=10150a)](https://github.com/nurulislamtask/GigaGet/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/nurulislamtask/GigaGet/total?style=for-the-badge&color=6a2cff&labelColor=10150a)](https://github.com/nurulislamtask/GigaGet/releases)
+[![Build](https://img.shields.io/github/actions/workflow/status/nurulislamtask/GigaGet/build.yml?style=for-the-badge&labelColor=10150a)](https://github.com/nurulislamtask/GigaGet/actions)
 
-## Get the apps (no local tools needed)
+**[⬇ Download the latest version](https://github.com/nurulislamtask/GigaGet/releases/latest)**
 
-1. Create a GitHub repository and push this folder to it.
-2. Open **Actions → Build GigaGet → Run workflow**.
-3. When it finishes, download the artifacts:
-   - `gigaget-android` → `GigaGet.apk`
-   - `gigaget-x86_64-pc-windows-msvc` → `.exe` / `.msi`
-   - `gigaget-x86_64-unknown-linux-gnu` → `.deb` / `.AppImage`
-   - `gigaget-x86_64-apple-darwin` → `.dmg`
+</div>
 
-Push a tag like `v0.1.0` and the same workflow publishes them as a GitHub Release.
+---
 
-### Android signing
-Without secrets the workflow signs with a throwaway key, which installs fine but a later build will not update over it (uninstall first). To keep one identity, add repository secrets `ANDROID_KEYSTORE_B64` (base64 of your `.keystore`, alias `gigaget` is not required) and `ANDROID_KEYSTORE_PASSWORD`.
+## Why GigaGet
 
-## Layout
+Most downloaders make you hunt for the right tool, install extras and fiddle with settings. GigaGet is built around one idea: **install it once and it just works.**
 
-| Path | What it is |
+| | |
 | --- | --- |
-| `ui/` | The interface (plain HTML/CSS/JS, phone-first, adapts to desktop). Open `ui/index.html` in a browser to preview it with a fake engine. |
-| `src-tauri/` | Tauri 2 app shell and the desktop engine (`src/engine.rs`) that drives yt-dlp and FFmpeg. |
-| `plugins/giga-engine/` | Android engine: a Tauri plugin with Kotlin code using youtubedl-android. |
-| `.github/workflows/build.yml` | Builds every platform. |
+| **Everything built in** | The download engine (yt-dlp) and FFmpeg ship inside the app. There is nothing else to install. |
+| **Stays up to date** | Websites change all the time. GigaGet refreshes its engine quietly in the background so downloads keep working. |
+| **Zero settings** | Files are saved to `Downloads/GigaGet`. Your last quality choice, history and theme are remembered. |
+| **One tap from your clipboard** | Copy a link anywhere, open GigaGet, and a banner offers to download it. |
+| **Same app everywhere** | One interface for phone and computer. Built phone-first, it grows into a sidebar layout on desktop. |
+| **Your choice of quality** | Best, 4K, 1440p, 1080p, 720p, 480p, 360p, or audio-only MP3. Only the options a video really has are shown. |
+| **Works on 1,800+ sites** | Powered by [yt-dlp](https://github.com/yt-dlp/yt-dlp), the most widely used open-source extractor. |
+| **Private** | No account, no ads, no tracking. Your files and history stay on your device. |
 
-The UI talks to one small API (`probe`, `start`, `cancel`, `info`, progress events) in `ui/engine.js`. Desktop answers it from Rust, Android from Kotlin.
+## Download
 
-## Develop locally
+Get the file for your device from the **[latest release](https://github.com/nurulislamtask/GigaGet/releases/latest)**.
 
-Needs Rust, Node 18+ and pnpm. Put yt-dlp and FFmpeg in `src-tauri/binaries/` named `gigaget-ytdlp-<target-triple>` and `gigaget-ffmpeg-<target-triple>` (the workflow shows how), then:
+| Device | File | How to install |
+| --- | --- | --- |
+| **Android** (7.0+) | `GigaGet.apk` | Open the file on your phone and allow *Install unknown apps* when asked. |
+| **Windows** 10 / 11 | `GigaGet_…_x64-setup.exe` or `.msi` | Run it. If SmartScreen appears, choose **More info → Run anyway**. |
+| **macOS** | `GigaGet_…_x64.dmg` | Drag to Applications. First launch: right-click the app, then **Open**. |
+| **Linux** | `.deb`, `.rpm` or `.AppImage` | Install with your package manager, or make the AppImage executable and run it. |
+
+> **Why the warnings?** GigaGet is a young open-source project and the installers are not yet signed with a paid certificate. The warnings are normal for unsigned apps and appear once.
+
+## How it works
+
+1. **Copy** a link to a video or audio.
+2. **Paste** it into GigaGet, or tap the banner that appears.
+3. **Pick** a quality and tap **Download**.
+
+Progress, speed and time left are shown live. Interrupted downloads can be retried, and finished files open with one tap.
+
+## Project status
+
+GigaGet is at an early stage (**v0.x**). It already downloads single videos and audio from supported sites on every platform.
+
+Planned: playlists and channels, background downloading on Android, share-to-GigaGet from other apps, subtitles, signed installers.
+
+## For developers
 
 ```
-pnpm install
-pnpm tauri dev
+ui/                        Interface (HTML, CSS, JavaScript)
+src-tauri/                 App shell (Tauri 2) and desktop engine (Rust)
+plugins/giga-engine/       Android engine (Kotlin, youtubedl-android)
+.github/workflows/         Builds every platform and publishes a release
 ```
 
-## Notes
+The interface talks to one small API (`probe`, `start`, `cancel`, `info`, plus progress events) defined in `ui/engine.js`. The desktop apps answer it from Rust and the Android app from Kotlin, so the interface is shared.
 
-- macOS and Windows builds are unsigned, so the first launch shows a system warning.
-- The macOS build is Intel and runs on Apple Silicon through Rosetta.
-- Android downloads run while the app is open. Background downloading is not built yet.
-- Use GigaGet only for content you have the right to save, and respect each site's terms.
+**Build everything:** open **Actions → Build GigaGet → Run workflow**. A successful run publishes a new release with every installer.
+
+**Run locally:** install Rust, Node 18+ and pnpm, place yt-dlp and FFmpeg in `src-tauri/binaries/` as `gigaget-ytdlp-<target>` and `gigaget-ffmpeg-<target>`, then run `pnpm install && pnpm tauri dev`. Open `ui/index.html` in a browser to preview the interface with a demo engine.
+
+**Android signing:** add the repository secrets `ANDROID_KEYSTORE_B64` and `ANDROID_KEYSTORE_PASSWORD` to sign every build with your own key so updates install over older versions. Without them a temporary key is used.
+
+## Responsible use
+
+GigaGet is for saving content you own or have permission to save. You are responsible for following copyright law and each website's terms of service.
+
+## Credits
+
+Built with [Tauri](https://tauri.app), [yt-dlp](https://github.com/yt-dlp/yt-dlp), [FFmpeg](https://ffmpeg.org) and [youtubedl-android](https://github.com/JunkFood02/youtubedl-android).
