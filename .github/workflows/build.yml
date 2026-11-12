@@ -62,9 +62,7 @@ jobs:
               ;;
             macOS)
               curl -fL https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos -o $B/gigaget-ytdlp-$T
-              curl -fL https://evermeet.cx/ffmpeg/getrelease/zip -o ff.zip
-              unzip -o ff.zip -d ffx
-              mv ffx/ffmpeg $B/gigaget-ffmpeg-$T
+              curl -fL https://github.com/eugeneware/ffmpeg-static/releases/download/b6.0/ffmpeg-darwin-x64 -o $B/gigaget-ffmpeg-$T
               ;;
           esac
           chmod +x $B/gigaget-* || true
@@ -99,14 +97,17 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - uses: android-actions/setup-android@v3
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-linux-android,armv7-linux-androideabi
 
       - name: Install NDK
         run: |
-          yes | sdkmanager "ndk;26.1.10909125" "build-tools;34.0.0" "platforms;android-34" >/dev/null
+          # The runner image already ships the Android SDK.
+          export ANDROID_HOME=${ANDROID_HOME:-/usr/local/lib/android/sdk}
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME \
+            "ndk;26.1.10909125" "build-tools;34.0.0" "platforms;android-34" >/dev/null
+          echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
           echo "NDK_HOME=$ANDROID_HOME/ndk/26.1.10909125" >> $GITHUB_ENV
 
       - run: pnpm install
