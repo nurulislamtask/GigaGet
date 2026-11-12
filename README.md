@@ -30,7 +30,9 @@ Most downloaders make you hunt for the right tool, install extras and fiddle wit
 | **One tap from your clipboard** | Copy a link anywhere, open GigaGet, and a banner offers to download it. |
 | **Same app everywhere** | One interface for phone and computer. Built phone-first, it grows into a sidebar layout on desktop. |
 | **Your choice of quality** | Best, 4K, 1440p, 1080p, 720p, 480p, 360p, or audio-only MP3. Only the options a video really has are shown. |
-| **Works on 1,800+ sites** | Powered by [yt-dlp](https://github.com/yt-dlp/yt-dlp), the most widely used open-source extractor. |
+| **Works on 1,800+ sites** | Powered by [yt-dlp](https://github.com/yt-dlp/yt-dlp), the most widely used open-source extractor. See [supported sites](#supported-sites). |
+| **Choose where files go** | Saved to `Downloads/GigaGet` by default. On computers pick any folder, on Android choose Downloads or Movies and Music. |
+| **Always current** | When a new version is released, GigaGet shows an update screen that stays until you update, so you never run an outdated, broken build. |
 | **Private** | No account, no ads, no tracking. Your files and history stay on your device. |
 
 ## Download
@@ -46,6 +48,20 @@ Get the file for your device from the **[latest release](https://github.com/nuru
 
 > **Why the warnings?** GigaGet is a young open-source project and the installers are not yet signed with a paid certificate. The warnings are normal for unsigned apps and appear once.
 
+## Supported sites
+
+GigaGet uses yt-dlp, which understands **1,800+ websites**. Popular ones include:
+
+| | | | |
+| --- | --- | --- | --- |
+| YouTube | Facebook | Instagram | TikTok |
+| X (Twitter) | Reddit | Vimeo | Dailymotion |
+| Twitch | SoundCloud | Bandcamp | Bilibili |
+| Pinterest | Tumblr | Rumble | Odysee |
+| Streamable | VK | Imgur | Direct file links |
+
+The full list is in the [yt-dlp supported sites](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md) page. Availability depends on each website and can change. Private content that needs a login and DRM-protected streaming (Netflix and similar) are not supported.
+
 ## How it works
 
 1. **Copy** a link to a video or audio.
@@ -54,11 +70,21 @@ Get the file for your device from the **[latest release](https://github.com/nuru
 
 Progress, speed and time left are shown live. Interrupted downloads can be retried, and finished files open with one tap.
 
+## Updates
+
+GigaGet checks for new versions by itself. When one is out, an **Update required** screen appears and stays until you install it, so every user is always on a build that works with the latest sites. Your history and settings are kept. If you are offline the app keeps working, and the update screen appears as soon as a newer version is known.
+
+## About
+
+GigaGet is made and maintained by [@nurulislamtask](https://github.com/nurulislamtask).
+
+It started from a simple wish: one downloader that looks and works the same on a phone and on a computer, and that you never have to set up. Ideas, bug reports and questions are welcome in [Issues](https://github.com/nurulislamtask/GigaGet/issues).
+
 ## Project status
 
 GigaGet is at an early stage (**v0.x**). It already downloads single videos and audio from supported sites on every platform.
 
-Planned: playlists and channels, background downloading on Android, share-to-GigaGet from other apps, subtitles, signed installers.
+Planned: playlists and channels, background downloading on Android, share-to-GigaGet from other apps, subtitles, installers signed with a paid certificate.
 
 ## For developers
 
@@ -75,7 +101,9 @@ The interface talks to one small API (`probe`, `start`, `cancel`, `info`, plus p
 
 **Run locally:** install Rust, Node 18+ and pnpm, place yt-dlp and FFmpeg in `src-tauri/binaries/` as `gigaget-ytdlp-<target>` and `gigaget-ffmpeg-<target>`, then run `pnpm install && pnpm tauri dev`. Open `ui/index.html` in a browser to preview the interface with a demo engine.
 
-**Android signing:** add the repository secrets `ANDROID_KEYSTORE_B64` and `ANDROID_KEYSTORE_PASSWORD` to sign every build with your own key so updates install over older versions. Without them a temporary key is used.
+**Versions:** every build is stamped `0.1.<run number>`, published as a GitHub Release with the same tag, and the in-app update screen compares against the latest release.
+
+**Android signing:** all builds are signed with the shared project key in `android-signing/`, so a new version installs over the old one. To use a private key instead, add the repository secrets `ANDROID_KEYSTORE_B64` and `ANDROID_KEYSTORE_PASSWORD`; they take priority.
 
 ## Responsible use
 

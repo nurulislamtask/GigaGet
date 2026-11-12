@@ -20,6 +20,9 @@ serde_json = "1"
 tokio = { version = "1", features = ["process", "io-util", "sync", "time", "rt", "macros"] }
 giga-engine = { path = "../plugins/giga-engine" }
 
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-dialog = "2"
+
 [profile.release]
 opt-level = "s"
 lto = true

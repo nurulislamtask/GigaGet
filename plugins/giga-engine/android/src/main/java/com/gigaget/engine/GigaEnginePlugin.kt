@@ -33,6 +33,7 @@ class StartArgs {
     lateinit var id: String
     lateinit var url: String
     var quality: String = "best"
+    var location: String = "downloads"
 }
 
 @InvokeArg
@@ -168,7 +169,7 @@ class GigaEnginePlugin(private val activity: Activity) : Plugin(activity) {
                 emit(args.id, "processing", percent = 100.0)
                 val result = tmp.listFiles()?.filter { it.isFile && !it.name.endsWith(".part") }?.maxByOrNull { it.lastModified() }
                     ?: throw IllegalStateException("no file was produced")
-                val finalRef = saveToDownloads(result)
+                val finalRef = saveToPublic(result, args.location)
                 emit(args.id, "done", percent = 100.0, file = finalRef)
             } catch (e: Exception) {
                 // Cancelling kills the process; that is reported by the UI itself.
@@ -210,23 +211,35 @@ class GigaEnginePlugin(private val activity: Activity) : Plugin(activity) {
         }
     }
 
-    /** Copy the finished file into the public Downloads/GigaGet folder so it shows up in Files and Gallery. */
-    private fun saveToDownloads(src: File): String {
+    /**
+     * Copy the finished file into public storage so it shows up in Files, Gallery and music apps.
+     * location "downloads" -> Downloads/GigaGet
+     * location "media"     -> Movies/GigaGet for video, Music/GigaGet for audio (anything else: Downloads)
+     */
+    private fun saveToPublic(src: File, location: String): String {
         if (Build.VERSION.SDK_INT < 29) return src.absolutePath
         val ext = src.extension.lowercase()
         val mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext) ?: "application/octet-stream"
+        val (collection, folder) = when {
+            location == "media" && mime.startsWith("video/") ->
+                MediaStore.Video.Media.EXTERNAL_CONTENT_URI to (Environment.DIRECTORY_MOVIES + "/GigaGet")
+            location == "media" && mime.startsWith("audio/") ->
+                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI to (Environment.DIRECTORY_MUSIC + "/GigaGet")
+            else ->
+                MediaStore.Downloads.EXTERNAL_CONTENT_URI to (Environment.DIRECTORY_DOWNLOADS + "/GigaGet")
+        }
         val values = ContentValues().apply {
-            put(MediaStore.Downloads.DISPLAY_NAME, src.name)
-            put(MediaStore.Downloads.MIME_TYPE, mime)
-            put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/GigaGet")
-            put(MediaStore.Downloads.IS_PENDING, 1)
+            put(MediaStore.MediaColumns.DISPLAY_NAME, src.name)
+            put(MediaStore.MediaColumns.MIME_TYPE, mime)
+            put(MediaStore.MediaColumns.RELATIVE_PATH, folder)
+            put(MediaStore.MediaColumns.IS_PENDING, 1)
         }
         val resolver = activity.contentResolver
-        val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
-            ?: throw IllegalStateException("cannot create file in Downloads")
+        val uri = resolver.insert(collection, values)
+            ?: throw IllegalStateException("cannot create file in $folder")
         resolver.openOutputStream(uri)!!.use { out -> src.inputStream().use { it.copyTo(out) } }
         values.clear()
-        values.put(MediaStore.Downloads.IS_PENDING, 0)
+        values.put(MediaStore.MediaColumns.IS_PENDING, 0)
         resolver.update(uri, values, null, null)
         return uri.toString()
     }

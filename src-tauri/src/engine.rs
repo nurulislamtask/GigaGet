@@ -194,9 +194,17 @@ pub async fn start(
     id: String,
     url: String,
     quality: String,
+    dir: Option<String>,
 ) -> Result<String, String> {
     let yt = ytdlp_path(&app)?;
-    let dir = out_dir(&app)?;
+    let dir = match dir.filter(|d| !d.trim().is_empty()) {
+        Some(d) => {
+            let p = PathBuf::from(d);
+            std::fs::create_dir_all(&p).map_err(|e| format!("cannot use that folder: {e}"))?;
+            p
+        }
+        None => out_dir(&app)?,
+    };
     let ffmpeg = ffmpeg_path();
 
     let mut args: Vec<String> = [

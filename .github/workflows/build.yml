@@ -24,6 +24,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Stamp app version
+        shell: bash
+        run: |
+          V=0.1.${{ github.run_number }}
+          node -e "const fs=require('fs');for(const f of ['package.json','src-tauri/tauri.conf.json']){const j=JSON.parse(fs.readFileSync(f));j.version='$V';fs.writeFileSync(f,JSON.stringify(j,null,2))}"
+          echo "Building GigaGet $V"
+
       - uses: pnpm/action-setup@v4
         with:
           version: 9
@@ -87,6 +94,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Stamp app version
+        shell: bash
+        run: |
+          V=0.1.${{ github.run_number }}
+          node -e "const fs=require('fs');for(const f of ['package.json','src-tauri/tauri.conf.json']){const j=JSON.parse(fs.readFileSync(f));j.version='$V';fs.writeFileSync(f,JSON.stringify(j,null,2))}"
+          echo "Building GigaGet $V"
+
       - uses: pnpm/action-setup@v4
         with:
           version: 9
@@ -127,6 +141,7 @@ jobs:
 
       - run: pnpm tauri android build --apk --target aarch64 --target armv7
 
+      # Every build is signed with the same key, which is what lets a new version install over the old one.
       - name: Sign the APK
         env:
           KS_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
@@ -137,14 +152,11 @@ jobs:
           if [ -n "$KS_B64" ]; then
             echo "$KS_B64" | base64 -d > release.keystore; PASS="$KS_PASS"
           else
-            # No key supplied: make a throwaway one. Installs fine, but each build is signed differently.
-            PASS=gigaget123
-            keytool -genkeypair -keystore release.keystore -alias gigaget -keyalg RSA -keysize 2048 \
-              -validity 10000 -storepass $PASS -keypass $PASS -dname "CN=GigaGet"
+            cp android-signing/gigaget.keystore release.keystore; PASS=gigaget-community
           fi
           $BT/zipalign -p -f 4 "$UNSIGNED" aligned.apk
           $BT/apksigner sign --ks release.keystore --ks-pass pass:$PASS --out GigaGet.apk aligned.apk
-          $BT/apksigner verify GigaGet.apk
+          $BT/apksigner verify --print-certs GigaGet.apk | head -3
 
       - uses: actions/upload-artifact@v4
         with:
@@ -165,4 +177,17 @@ jobs:
           target_commitish: ${{ github.sha }}
           name: GigaGet v0.1.${{ github.run_number }}
           make_latest: true
+          body: |
+            ## GigaGet v0.1.${{ github.run_number }}
+
+            Download the file for your device below.
+
+            | Device | File |
+            | --- | --- |
+            | Android | `GigaGet.apk` |
+            | Windows | `GigaGet_..._x64-setup.exe` (or `.msi`) |
+            | macOS | `GigaGet_..._x64.dmg` |
+            | Linux | `.AppImage`, `.deb` or `.rpm` |
+
+            Already using GigaGet? The app will ask you to update to this version automatically.
           files: dist/**

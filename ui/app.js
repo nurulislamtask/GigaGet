@@ -8,7 +8,7 @@
 
   // Everything the user chose last time is remembered, so nothing needs configuring twice.
   let items = store.get("items", []);
-  let prefs = Object.assign({ quality: "best", clip: true, theme: "auto" }, store.get("prefs", {}));
+  let prefs = Object.assign({ quality: "best", clip: true, theme: "auto", saveDir: "", saveLoc: "downloads" }, store.get("prefs", {}));
   let filter = "all";
   let probed = null;
   let lastClip = store.get("lastClip", "");
@@ -76,7 +76,7 @@
     const item = { id, url, title: (info && info.title) || url, thumb: (info && info.thumbnail) || "", quality,
       status: "downloading", percent: 0, speed: "", eta: "", file: "", error: "", at: Date.now() };
     items.unshift(item); saveItems(); render();
-    try { await engine.start({ id, url, quality }); }
+    try { await engine.start({ id, url, quality, dir: prefs.saveDir || "", location: prefs.saveLoc || "downloads" }); }
     catch (e) { patch(id, { status: "error", error: String((e && e.message) || e) }); }
   }
 
@@ -155,7 +155,35 @@
   $("#optClip").addEventListener("change", (e) => { prefs.clip = e.target.checked; savePrefs(); });
   $("#optTheme").value = prefs.theme;
   $("#optTheme").addEventListener("change", (e) => { prefs.theme = e.target.value; savePrefs(); applyTheme(); });
-  engine.info().then((i) => { if (i.dir) $("#dir").textContent = i.dir; if (i.engine) $("#engineVer").textContent = i.engine; }).catch(() => {});
+  // Save location: a folder picker on computers, two simple choices on Android (its storage rules).
+  const isAndroid = engine.platform === "android";
+  let defaultDir = "Downloads/GigaGet";
+  function showDir() {
+    $("#dir").textContent = prefs.saveDir || defaultDir;
+    $("#dir").title = prefs.saveDir || defaultDir;
+    $("#resetDir").hidden = !prefs.saveDir;
+  }
+  $("#rowDesk").hidden = isAndroid;
+  $("#rowAnd").hidden = !isAndroid;
+  $("#optLoc").value = prefs.saveLoc;
+  $("#optLoc").addEventListener("change", (e) => { prefs.saveLoc = e.target.value; savePrefs(); });
+  $("#pickDir").addEventListener("click", async () => {
+    const d = await engine.pickFolder();
+    if (d) { prefs.saveDir = d; savePrefs(); showDir(); }
+  });
+  $("#resetDir").addEventListener("click", () => { prefs.saveDir = ""; savePrefs(); showDir(); });
+  engine.info().then((i) => { if (i.dir) defaultDir = i.dir; if (i.engine) $("#engineVer").textContent = i.engine; showDir(); }).catch(showDir);
+
+  // Paste button: fetch the clipboard on tap (works on phones where silent clipboard reads are blocked).
+  $("#pasteBtn").addEventListener("click", async () => {
+    const t = ((await engine.clipboard()) || "").trim();
+    if (!t) { showErr("Nothing to paste. Copy a link first."); return; }
+    $("#url").value = t;
+    if (URL_RE.test(t)) probe(t); else showErr("That does not look like a link.");
+  });
+
+  // Links in the About card open in the system browser.
+  $$("[data-href]").forEach((b) => b.addEventListener("click", () => engine.openUrl(b.dataset.href)));
 
   // After an app restart, anything that was mid-download is shown as interrupted so it can be retried.
   items.forEach((i) => { if (i.status === "downloading") { i.status = "error"; i.error = "interrupted"; } });

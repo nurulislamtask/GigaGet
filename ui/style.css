@@ -115,3 +115,38 @@ select{background:var(--panel2);border:1px solid var(--line);border-radius:10px;
   .rail .nav:hover{color:var(--text)}
   main{padding:40px 32px}
 }
+
+/* paste button, small pill */
+.grab .ghost{padding:8px 10px;font-weight:600;color:var(--acc)}
+.pill{padding:8px 14px;border-radius:999px;background:var(--panel2);border:1px solid var(--line);font-weight:600;font-size:13px}
+.pill:hover{border-color:var(--acc)}
+.pathbox{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:wrap;justify-content:flex-end}
+.pathbox code{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:rtl;text-align:left}
+.row>span{flex-shrink:0}
+
+/* about */
+.about{margin-top:14px;padding:18px 16px}
+.about p{color:var(--mute);line-height:1.55;font-size:14px;margin:12px 0 6px}
+.about-top{display:flex;align-items:center;gap:14px}
+.logo.big{width:48px;height:48px;border-radius:14px}
+.logo.big::after{width:14px;height:14px}
+.about-name{font-weight:800;font-size:20px;letter-spacing:-.02em}
+.about-ver{color:var(--mute);font-size:13px;margin-top:2px}
+.about-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid var(--line);font-size:14px}
+.about-row span{color:var(--mute)}
+.link{color:var(--acc);font-weight:600;text-align:right;word-break:break-all}
+.link:hover{text-decoration:underline}
+
+/* forced update popup */
+.gate{position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:20px;
+  background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(10px)}
+.gate-card{width:100%;max-width:380px;text-align:center;background:var(--panel);border:1px solid var(--line);
+  border-radius:24px;padding:28px 22px;box-shadow:0 30px 80px rgba(0,0,0,.35)}
+.gate-ic{width:64px;height:64px;margin:0 auto 14px;border-radius:20px;background:var(--acc);color:var(--acc-ink);
+  display:grid;place-items:center;font-size:32px;font-weight:800}
+.gate-card h2{font-size:22px;letter-spacing:-.02em;margin-bottom:8px}
+.gate-card p{color:var(--mute);line-height:1.55;font-size:14.5px}
+.gate-ver{margin:16px 0;font-size:14px;color:var(--mute)}
+.gate-ver b{color:var(--text)}
+.gate-card .btn.big{width:100%}
+.gate-card .fine{margin:12px 0 0}

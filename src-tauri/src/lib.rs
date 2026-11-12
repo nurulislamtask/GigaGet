@@ -8,6 +8,7 @@ pub fn run() {
     // Desktop: yt-dlp + FFmpeg are shipped inside the app and driven from Rust.
     #[cfg(desktop)]
     let builder = builder
+        .plugin(tauri_plugin_dialog::init())
         .manage(engine::Engine::default())
         .setup(|app| {
             engine::spawn_background_update(app.handle().clone());

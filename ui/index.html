@@ -28,6 +28,7 @@
 
       <form id="grab" class="grab" autocomplete="off">
         <input id="url" type="url" inputmode="url" placeholder="Paste a video, audio or file link" enterkeyhint="go" required>
+        <button class="ghost" id="pasteBtn" type="button">Paste</button>
         <button class="btn" id="grabBtn" type="submit">Get</button>
       </form>
 
@@ -60,15 +61,47 @@
 
     <section id="view-about" class="view" hidden>
       <h1 class="hero">Settings</h1>
+
       <div class="card set">
-        <p class="lead">There is nothing you have to set up. GigaGet already includes everything it needs, keeps itself updated and remembers your last choices.</p>
-        <div class="row"><span>Saving to</span><code id="dir">Downloads/GigaGet</code></div>
+        <p class="lead">Nothing here needs to be set up. GigaGet already includes everything it needs, keeps itself updated and remembers your last choices.</p>
+
+        <div class="row" id="rowDesk">
+          <span>Save to</span>
+          <div class="pathbox">
+            <code id="dir">Downloads/GigaGet</code>
+            <button id="pickDir" class="pill" type="button">Change</button>
+            <button id="resetDir" class="ghost small" type="button" hidden>Reset</button>
+          </div>
+        </div>
+        <div class="row" id="rowAnd" hidden>
+          <span>Save to</span>
+          <select id="optLoc" aria-label="Save location">
+            <option value="downloads">Downloads / GigaGet</option>
+            <option value="media">Movies and Music / GigaGet</option>
+          </select>
+        </div>
+
         <div class="row"><span>Engine</span><code id="engineVer">built in</code></div>
         <div class="row"><span>Auto-detect copied links</span>
           <label class="sw"><input type="checkbox" id="optClip" checked><i></i></label></div>
         <div class="row"><span>Theme</span>
           <select id="optTheme"><option value="auto">Auto</option><option value="dark">Dark</option><option value="light">Light</option></select></div>
       </div>
+
+      <div class="card about">
+        <div class="about-top">
+          <span class="logo big" aria-hidden="true"></span>
+          <div>
+            <div class="about-name">GigaGet</div>
+            <div class="about-ver" id="aboutVer">Version</div>
+          </div>
+        </div>
+        <p>Free and open source. Paste a link, pick a quality, done. One app for your phone and your computer, with the download engine built in.</p>
+        <div class="about-row"><span>Made by</span><button class="link" data-href="https://github.com/nurulislamtask">@nurulislamtask</button></div>
+        <div class="about-row"><span>Source and downloads</span><button class="link" data-href="https://github.com/nurulislamtask/GigaGet">Open on GitHub</button></div>
+        <div class="about-row"><span>Report a problem or idea</span><button class="link" data-href="https://github.com/nurulislamtask/GigaGet/issues">Open an issue</button></div>
+      </div>
+
       <p class="fine">GigaGet is for saving content you have the right to save. Respect each site's terms and copyright.</p>
     </section>
   </main>
@@ -78,7 +111,21 @@
     <button class="nav" data-view="about">Settings</button>
   </nav>
 </div>
+
+<!-- Shown when a newer version exists. It cannot be closed: the app stays locked until the user updates. -->
+<div id="gate" class="gate" hidden role="alertdialog" aria-modal="true" aria-labelledby="gateTitle">
+  <div class="gate-card">
+    <div class="gate-ic" aria-hidden="true">↑</div>
+    <h2 id="gateTitle">Update required</h2>
+    <p>A new version of GigaGet is ready. Please update to keep downloading. It only takes a moment.</p>
+    <div class="gate-ver"><span id="gateFrom"></span> &rarr; <b id="gateTo"></b></div>
+    <button id="gateBtn" class="btn big">Update now</button>
+    <p class="fine" id="gateHint"></p>
+  </div>
+</div>
+
 <script src="engine.js"></script>
 <script src="app.js"></script>
+<script src="update.js"></script>
 </body>
 </html>

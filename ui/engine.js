@@ -4,7 +4,9 @@
 //  - Plain browser (preview only): a small fake engine so the UI can be tested
 (function () {
   const T = window.__TAURI__;
-  const isAndroid = /Android/i.test(navigator.userAgent);
+  const UA = navigator.userAgent;
+  const isAndroid = /Android/i.test(UA);
+  const platform = isAndroid ? "android" : /Windows/i.test(UA) ? "windows" : /Mac/i.test(UA) ? "mac" : "linux";
   const PLUGIN = "giga-engine";
   let engine;
 
@@ -13,6 +15,7 @@
       T.core.invoke(isAndroid ? `plugin:${PLUGIN}|${cmd}` : cmd, args || {});
     engine = {
       native: true,
+      platform,
       probe: (url) => call("probe", { url }),
       start: (req) => call("start", req),
       cancel: (id) => call("cancel", { id }),
@@ -27,12 +30,29 @@
       async open(path) {
         try { await call("open_file", { path }); } catch {}
       },
+      async version() {
+        try { return await T.app.getVersion(); } catch { return ""; }
+      },
+      async openUrl(url) {
+        try {
+          if (T.opener && T.opener.openUrl) { await T.opener.openUrl(url); return; }
+        } catch {}
+        window.open(url, "_blank");
+      },
+      async pickFolder() {
+        try {
+          if (!T.dialog) return null;
+          const r = await T.dialog.open({ directory: true, multiple: false });
+          return typeof r === "string" ? r : null;
+        } catch { return null; }
+      },
     };
   } else {
     const timers = {};
     let listener = () => {};
     engine = {
       native: false,
+      platform,
       probe: async (url) => {
         await new Promise((r) => setTimeout(r, 500));
         return {
@@ -61,6 +81,10 @@
       onProgress: async (cb) => { listener = cb; },
       clipboard: async () => { try { return await navigator.clipboard.readText(); } catch { return ""; } },
       open: async () => {},
+      // Preview only: pass ?v=0.1.0 in the address to pretend this is that app version.
+      version: async () => new URLSearchParams(location.search).get("v") || "",
+      openUrl: async (u) => { window.__lastOpened = u; },
+      pickFolder: async () => "/home/you/Videos",
     };
   }
   window.engine = engine;
