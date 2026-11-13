@@ -63,7 +63,7 @@ main{flex:1;width:100%;max-width:760px;margin:0 auto;padding:20px 16px 110px}
 .chip{padding:9px 14px;border-radius:999px;border:1px solid var(--line);background:var(--panel2);font-size:14px;font-weight:600}
 .chip[aria-checked="true"]{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
 .prow{display:flex;gap:8px}
-.err{margin-top:12px;color:var(--bad);font-size:14px}
+.err{margin-top:12px;color:var(--bad);font-size:14px;overflow-wrap:anywhere;line-height:1.45}
 
 /* list */
 .tabs{display:flex;align-items:center;gap:4px;margin:26px 0 10px}

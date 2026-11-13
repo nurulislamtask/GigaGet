@@ -146,7 +146,8 @@ jobs:
           s = re.sub(r"(isMinifyEnabled|minifyEnabled)(\s*=\s*|\s+)true", r"\1\2false", s)
           open(p, "w").write(s)
           # Belt and braces: if minify still runs anywhere, these rules keep the engine intact.
-          open("src-tauri/gen/android/app/proguard-gigaget.pro", "w").write("""-dontobfuscate
+          open("src-tauri/gen/android/app/proguard-gigaget.pro", "w").write("""-dontshrink
+          -dontobfuscate
           -dontoptimize
           -keep class com.yausername.** { *; }
           -keep class com.gigaget.engine.** { *; }
