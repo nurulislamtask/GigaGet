@@ -175,6 +175,8 @@ jobs:
           # R8 renames and strips classes the engine libraries load by reflection, which can crash the app.
           s = re.sub(r"(isMinifyEnabled|minifyEnabled)(\s*=\s*|\s+)true", r"\1\2false", s)
           s = re.sub(r"isShrinkResources(\s*=\s*|\s+)true", r"isShrinkResources\1false", s)
+          # Newer Tauri templates switch R8 and the resource shrinker on with `optimization { enable = true }`.
+          s = re.sub(r"(optimization\s*\{\s*enable\s*=\s*)true", r"\1false", s)
           # Whatever the template does, force both off for every build type.
           s += "\nandroid {\n    buildTypes {\n        configureEach {\n            isMinifyEnabled = false\n            isShrinkResources = false\n        }\n    }\n}\n"
           open(p, "w").write(s)
@@ -189,7 +191,8 @@ jobs:
           -keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
           -dontwarn **
           """.replace("\n          ", "\n"))
-          print([l.strip() for l in s.splitlines() if re.search(r"minify|proguard|useLegacy", l, re.I)])
+          print([l.strip() for l in s.splitlines() if re.search(r"minify|proguard|useLegacy|optimization|enable *=", l, re.I)])
+          assert not re.search(r"optimization\s*\{\s*enable\s*=\s*true", s), "R8 is still enabled" 
           EOF
 
       - run: pnpm tauri android build --apk ${{ matrix.build_targets }}
