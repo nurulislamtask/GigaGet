@@ -69,6 +69,7 @@
       box.appendChild(b);
     });
     $("#preview").hidden = false;
+    try { $("#preview").scrollIntoView({ behavior: "smooth", block: "nearest" }); } catch {}
   }
 
   async function startDownload(url, info, quality) {
@@ -98,10 +99,11 @@
   }
   function dismissClip() { const u = $("#clip").dataset.url; if (u) { lastClip = u; store.set("lastClip", u); } $("#clip").hidden = true; }
   $("#clipX").addEventListener("click", dismissClip);
-  $("#clipGo").addEventListener("click", async () => {
+  // A copied link never downloads by itself: it opens the quality picker first.
+  $("#clipGo").addEventListener("click", () => {
     const u = $("#clip").dataset.url; dismissClip();
-    try { const info = await engine.probe(u); startDownload(u, info, prefs.quality); }
-    catch (e) { showErr("Could not read that link. " + ((e && e.message) || "")); }
+    $("#url").value = u;
+    probe(u);
   });
   window.addEventListener("focus", checkClipboard);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) checkClipboard(); });
@@ -189,3 +191,34 @@
   items.forEach((i) => { if (i.status === "downloading") { i.status = "error"; i.error = "interrupted"; } });
   applyTheme(); render(); checkClipboard();
 })();
+
+/* ---------- self-test (used by CI on an Android emulator) ----------
+   Runs the real flow through the real UI-to-engine bridge and prints progress to the log.
+   It only runs when the Android plugin calls it; it is not reachable from any screen. */
+window.ggSelfTest = async function () {
+  if (window.__ggTestRan) return;
+  window.__ggTestRan = true;
+  const log = (m) => console.log("GGTEST " + m);
+  try {
+    const url = "https://www.w3schools.com/html/mov_bbb.mp4";
+    log("platform=" + engine.platform + " native=" + engine.native + " ua=" + navigator.userAgent.slice(0, 80));
+    log("probing " + url);
+    const t0 = Date.now();
+    const info = await engine.probe(url);
+    log("probe ok in " + Math.round((Date.now() - t0) / 1000) + "s: " + JSON.stringify(info).slice(0, 300));
+    const done = new Promise((resolve) => {
+      engine.onProgress((p) => {
+        if (!p || p.id !== "selftest") return;
+        if (p.status === "done" || p.status === "error") resolve(p);
+        else log("progress " + p.status + " " + Math.floor(p.percent || 0) + "%");
+      });
+    });
+    log("starting download");
+    await engine.start({ id: "selftest", url, quality: "best", dir: "", location: "downloads" });
+    const res = await Promise.race([done, new Promise((r) => setTimeout(() => r({ status: "error", error: "timeout after 150s" }), 150000))]);
+    if (res.status === "done") log("DONE file=" + res.file);
+    else log("FAIL download error: " + res.error);
+  } catch (e) {
+    log("FAIL " + ((e && e.message) || e));
+  }
+};

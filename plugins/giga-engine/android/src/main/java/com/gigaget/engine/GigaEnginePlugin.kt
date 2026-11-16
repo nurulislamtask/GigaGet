@@ -9,6 +9,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
 import android.webkit.MimeTypeMap
+import android.webkit.WebView
 import app.tauri.annotation.Command
 import app.tauri.annotation.InvokeArg
 import app.tauri.annotation.TauriPlugin
@@ -33,6 +34,8 @@ class StartArgs {
     lateinit var url: String
     var quality: String = "best"
     var location: String = "downloads"
+    // Sent by the shared UI for desktop folders; Android ignores it but must accept it.
+    var dir: String = ""
 }
 
 @InvokeArg
@@ -50,6 +53,21 @@ class GigaEnginePlugin(private val activity: Activity) : Plugin(activity) {
 
     private val tag = "GigaGet"
     private val pool = Executors.newCachedThreadPool()
+
+    /** CI starts the app with `--ez giga_selftest true` to run one real download on an emulator. */
+    override fun load(webView: WebView) {
+        try {
+            if (activity.intent?.getBooleanExtra("giga_selftest", false) == true) {
+                for (delay in longArrayOf(8000, 16000, 24000)) {
+                    webView.postDelayed({
+                        webView.evaluateJavascript("window.ggSelfTest && window.ggSelfTest()", null)
+                    }, delay)
+                }
+            }
+        } catch (t: Throwable) {
+            Log.w(tag, "selftest hook skipped", t)
+        }
+    }
     private val initLock = Any()
     @Volatile private var initialized = false
 
