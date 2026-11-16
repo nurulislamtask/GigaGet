@@ -22,6 +22,7 @@ import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLRequest
 import java.io.File
 import java.util.concurrent.Executors
+import java.util.concurrent.locks.ReentrantReadWriteLock
 
 @InvokeArg
 class UrlArgs {
@@ -71,6 +72,33 @@ class GigaEnginePlugin(private val activity: Activity) : Plugin(activity) {
     private val initLock = Any()
     @Volatile private var initialized = false
 
+    // Reading info or downloading takes the read side; refreshing yt-dlp takes the write side, so the
+    // yt-dlp files are never replaced while a link is being read or a file is downloading.
+    private val engineLock = ReentrantReadWriteLock()
+    private fun <T> withEngine(block: () -> T): T {
+        val l = engineLock.readLock()
+        l.lock()
+        try { return block() } finally { l.unlock() }
+    }
+
+    /** Sites change often, so refresh yt-dlp quietly, but only when nothing is using it. */
+    private fun scheduleUpdate(app: android.app.Application) {
+        pool.execute {
+            try {
+                Thread.sleep(30_000)
+                for (attempt in 1..10) {
+                    val w = engineLock.writeLock()
+                    if (w.tryLock()) {
+                        try { YoutubeDL.getInstance().updateYoutubeDL(app) } catch (t: Throwable) { Log.w(tag, "yt-dlp update skipped", t) } finally { w.unlock() }
+                        return@execute
+                    }
+                    Thread.sleep(60_000)
+                }
+            } catch (_: Throwable) {
+            }
+        }
+    }
+
     /**
      * The bundled yt-dlp + FFmpeg are unpacked on first use, never at app launch, so a problem in the
      * engine can only show up as an error message on screen and can never stop the app from opening.
@@ -83,10 +111,7 @@ class GigaEnginePlugin(private val activity: Activity) : Plugin(activity) {
             YoutubeDL.getInstance().init(app)
             FFmpeg.getInstance().init(app)
             initialized = true
-            // Sites change often: refresh yt-dlp quietly once the engine is up.
-            pool.execute {
-                try { YoutubeDL.getInstance().updateYoutubeDL(app) } catch (t: Throwable) { Log.w(tag, "yt-dlp update skipped", t) }
-            }
+            scheduleUpdate(app)
             null
         } catch (t: Throwable) {
             Log.e(tag, "engine failed to start", t)
@@ -105,7 +130,7 @@ class GigaEnginePlugin(private val activity: Activity) : Plugin(activity) {
                 val req = YoutubeDLRequest(args.url)
                 req.addOption("--no-playlist")
                 req.addOption("--no-warnings")
-                val info = YoutubeDL.getInstance().getInfo(req)
+                val info = withEngine { YoutubeDL.getInstance().getInfo(req) }
 
                 var maxH = 0
                 info.formats?.forEach { if (it.height > maxH) maxH = it.height }
@@ -175,11 +200,13 @@ class GigaEnginePlugin(private val activity: Activity) : Plugin(activity) {
                 }
 
                 var last = 0L
-                YoutubeDL.getInstance().execute(req, args.id) { progress, eta, _ ->
-                    val now = System.currentTimeMillis()
-                    if (now - last > 250) {
-                        last = now
-                        emit(args.id, "downloading", percent = progress.toDouble().coerceAtLeast(0.0), eta = formatEta(eta))
+                withEngine {
+                    YoutubeDL.getInstance().execute(req, args.id) { progress, eta, _ ->
+                        val now = System.currentTimeMillis()
+                        if (now - last > 250) {
+                            last = now
+                            emit(args.id, "downloading", percent = progress.toDouble().coerceAtLeast(0.0), eta = formatEta(eta))
+                        }
                     }
                 }
 
