@@ -148,6 +148,21 @@ jobs:
       - run: pnpm tauri icon app-icon.png
       - run: pnpm tauri android init
 
+      # `android init` ships Tauri's default icon, so put the GigaGet logo in place of it.
+      - name: Use the GigaGet logo as the Android app icon
+        run: |
+          RES=src-tauri/gen/android/app/src/main/res
+          pnpm tauri icon app-icon.png --output /tmp/ic_full
+          pnpm tauri icon app-icon-fg.png --output /tmp/ic_fg
+          cp -r /tmp/ic_full/android/. $RES/
+          for d in /tmp/ic_fg/android/mipmap-*; do
+            b=$(basename $d)
+            [ -f $d/ic_launcher_foreground.png ] && cp $d/ic_launcher_foreground.png $RES/$b/ || true
+          done
+          mkdir -p $RES/values
+          printf '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n  <color name="ic_launcher_background">#C8FF3C</color>\n</resources>\n' > $RES/values/ic_launcher_background.xml
+          find $RES -iname "*launcher*" | sort | head -30
+
       # yt-dlp and FFmpeg are native binaries packed in the APK; Android must unpack them to run them.
       - name: Allow native binaries to be extracted, keep reflection-based code intact
         run: |
@@ -159,7 +174,11 @@ jobs:
               s = s.replace("android {", "android {\n    packaging { jniLibs { useLegacyPackaging = true } }", 1)
           # R8 renames and strips classes the engine libraries load by reflection, which can crash the app.
           s = re.sub(r"(isMinifyEnabled|minifyEnabled)(\s*=\s*|\s+)true", r"\1\2false", s)
+          s = re.sub(r"isShrinkResources(\s*=\s*|\s+)true", r"isShrinkResources\1false", s)
+          # Whatever the template does, force both off for every build type.
+          s += "\nandroid {\n    buildTypes {\n        configureEach {\n            isMinifyEnabled = false\n            isShrinkResources = false\n        }\n    }\n}\n"
           open(p, "w").write(s)
+          print(s)
           # Belt and braces: if minify still runs anywhere, these rules keep the engine intact.
           open("src-tauri/gen/android/app/proguard-gigaget.pro", "w").write("""-dontshrink
           -dontobfuscate
@@ -191,6 +210,7 @@ jobs:
           $BT/zipalign -p -f 4 "$UNSIGNED" aligned.apk
           $BT/apksigner sign --ks release.keystore --ks-pass pass:$PASS --out GigaGet.apk aligned.apk
           $BT/apksigner verify --print-certs GigaGet.apk | head -3
+          echo "start-up string present in the APK:"; $BT/aapt2 dump resources GigaGet.apk | grep -c "string/androidx_startup" || true
 
       - uses: actions/upload-artifact@v4
         if: ${{ !matrix.test }}
